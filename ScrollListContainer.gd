@@ -105,11 +105,10 @@ func _check_focus(focus_owner : Control):
         return
     if !focus_owner or !is_instance_valid(focus_owner) or !is_a_parent_of(focus_owner):
         return
-    var xform = get_global_transform().inverse()
-    #var focus_rect : Rect2 = xform.xform(focus_owner.get_global_rect())
     var focus_rect : Rect2 = focus_owner.get_rect()
     var rect : Rect2 = get_rect()
     rect.position = Vector2()
+    
     if vertical:
         focus_rect.position.y -= initial_spacing
         focus_rect.end.y += initial_spacing*2.0

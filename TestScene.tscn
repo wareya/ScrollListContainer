@@ -100,17 +100,17 @@ text = "Non-expanding button"
 
 [node name="RichTextLabel2" type="RichTextLabel" parent="ScrollListContainer"]
 margin_left = 4.0
-margin_top = 429.0
+margin_top = 333.0
 margin_right = 289.0
-margin_bottom = 504.0
+margin_bottom = 408.0
 text = "From where I stand, there isn't much in the way of delicacies to partake in here. Where is the theatre? Where is the music? Beyond the city walls, out in the boondocks, where bandits abound!"
 fit_content_height = true
 
 [node name="Button5" type="Button" parent="ScrollListContainer"]
 margin_left = 4.0
-margin_top = 508.0
+margin_top = 412.0
 margin_right = 158.0
-margin_bottom = 528.0
+margin_bottom = 432.0
 size_flags_horizontal = 0
 text = "Non-expanding button"
 
