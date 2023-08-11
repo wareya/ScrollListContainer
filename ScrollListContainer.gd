@@ -2,8 +2,9 @@ tool
 class_name ScrollListContainer
 extends Container
 
-var scrollbar_v : VScrollBar
-var scrollbar_h : HScrollBar
+var scrollbar_v : VScrollBar = null
+var scrollbar_h : HScrollBar = null
+var scroll_offset : Vector2 = Vector2()
 
 func check_scrollbars():
     if scrollbar_v == null:
@@ -42,6 +43,9 @@ export var follow_focus : bool = true setget set_follow_focus
 
 export var spacing : float = 0.0 setget set_spacing
 export var initial_spacing : float = 0.0 setget set_initial_spacing
+export var side_margin : float = 0.0 setget set_side_margin
+
+export var auto_hide_scrollbars : bool = true setget set_autohide
 
 export var background_texture : Texture = null setget set_bg
 export var background_inner_rect : Rect2 = Rect2() setget set_bg_rect
@@ -73,12 +77,21 @@ func set_spacing(_spacing):
     queue_sort()
     update()
 
+func set_side_margin(_margin):
+    side_margin = _margin
+    queue_sort()
+    update()
+
 func set_initial_spacing(_initial_spacing):
     initial_spacing = _initial_spacing
     queue_sort()
     update()
 
-var scroll_offset : Vector2 = Vector2()
+func set_autohide(_autohide):
+    auto_hide_scrollbars = _autohide
+    queue_sort()
+    update()
+
 func _scroll(_unused):
     if !vertical:
         scroll_offset.x = scrollbar_h.value
@@ -107,14 +120,12 @@ func check_focus(focus_owner : Control):
             scrollbar_h.value += focus_rect.position.x - rect.position.x
 
 func _notification(what):
-    if what in [NOTIFICATION_TRANSFORM_CHANGED, NOTIFICATION_VISIBILITY_CHANGED]:
+    if what in [NOTIFICATION_TRANSFORM_CHANGED, NOTIFICATION_VISIBILITY_CHANGED, NOTIFICATION_RESIZED]:
         fix_bg()
     if what == NOTIFICATION_PREDELETE:
         if _sibling_ci_rid:
             VisualServer.free_rid(_sibling_ci_rid)
             _sibling_ci_rid = null
-
-var _sibling_ci_rid = null
 
 func get_parent_canvasitem_of(node : CanvasItem) -> CanvasItem:
     var p = node.get_parent()
@@ -129,10 +140,10 @@ func calculate_bg_rect():
     var t = background_texture
     if t:
         var tex_size : Vector2 = t.get_size()
-        var left = int(background_inner_rect.position.x)
-        var top = int(background_inner_rect.position.y)
-        var right = int(tex_size.x - background_inner_rect.end.x)
-        var bottom = int(tex_size.y - background_inner_rect.end.y)
+        var left = background_inner_rect.position.x
+        var top = background_inner_rect.position.y
+        var right = tex_size.x - background_inner_rect.end.x
+        var bottom = tex_size.y - background_inner_rect.end.y
         var pos = Vector2(-left, -top)
         var _bg_extra_size = Vector2()
         _bg_extra_size.x = left + right
@@ -142,6 +153,7 @@ func calculate_bg_rect():
     else:
         return get_rect()
 
+var _sibling_ci_rid = null
 
 func fix_bg():
     if _sibling_ci_rid == null:
@@ -164,34 +176,42 @@ func fix_bg():
     var t = background_texture
     var s = Rect2(Vector2(), t.get_size())
     var r = calculate_bg_rect()
-    VisualServer.canvas_item_add_nine_patch(rid, r, s, t, background_inner_rect.position, background_inner_rect.end, VisualServer.NINE_PATCH_STRETCH, VisualServer.NINE_PATCH_STRETCH, true)
+    var d = s.size - background_inner_rect.end
+    VisualServer.canvas_item_add_nine_patch(rid, r, s, t, background_inner_rect.position, d, VisualServer.NINE_PATCH_STRETCH, VisualServer.NINE_PATCH_STRETCH, true)
 
-func _reflow():
+func do_reflow(visible_scroll : bool):
     check_scrollbars()
     
     var cursor : Vector2 = Vector2()
-    var rect : Rect2 = get_rect()
+    var raw_rect : Rect2 = get_rect()
+    var rect : Rect2 = raw_rect
     rect.position = Vector2()
     
     if vertical:
-        cursor.y += initial_spacing
-    else:
-        cursor.x += initial_spacing
-    
-    if vertical:
         scroll_offset.x = 0
-        var scroll_size = scrollbar_v.get_combined_minimum_size().x
         scrollbar_h.hide()
-        scrollbar_v.show()
-        fit_child_in_rect(scrollbar_v, Rect2(rect.size.x - scroll_size, 0, scroll_size, rect.size.y))
-        rect.size.x -= scroll_size
+        if visible_scroll:
+            var scroll_size = scrollbar_v.get_combined_minimum_size().x
+            scrollbar_v.show()
+            fit_child_in_rect(scrollbar_v, Rect2(rect.size.x - scroll_size, 0, scroll_size, rect.size.y))
+            rect.size.x -= scroll_size
     else:
         scroll_offset.y = 0
-        var scroll_size = scrollbar_h.get_combined_minimum_size().y
         scrollbar_v.hide()
-        scrollbar_h.show()
-        fit_child_in_rect(scrollbar_h, Rect2(0, rect.size.y - scroll_size, rect.size.x, scroll_size))
-        rect.size.y -= scroll_size
+        if visible_scroll:
+            var scroll_size = scrollbar_h.get_combined_minimum_size().y
+            scrollbar_h.show()
+            fit_child_in_rect(scrollbar_h, Rect2(0, rect.size.y - scroll_size, rect.size.x, scroll_size))
+            rect.size.y -= scroll_size
+    
+    if vertical:
+        rect.position.x += side_margin
+        rect.size.x -= side_margin*2.0
+        cursor.y += initial_spacing
+    else:
+        rect.position.y += side_margin
+        rect.size.y -= side_margin*2.0
+        cursor.x += initial_spacing
     
     var remain_size_part = Vector2(rect.size.x, 0.0) if vertical else Vector2(0.0, rect.size.y)
     
@@ -214,9 +234,42 @@ func _reflow():
             child.position = cursor
             child.position -= scroll_offset
     
+    var c = cursor
+    if vertical:
+        cursor.y -= spacing
+    else:
+        cursor.x -= spacing
+    
     if vertical:
         scrollbar_v.max_value = max(rect.size.y, cursor.y)
         scrollbar_v.page = rect.size.y
     else:
         scrollbar_h.max_value = max(rect.size.x, cursor.x)
         scrollbar_h.page = rect.size.x
+    
+    if visible_scroll:
+        return true
+    else:
+        if vertical:
+            return scrollbar_v.value == 0.0 and scrollbar_v.max_value <= scrollbar_v.page
+        else:
+            return scrollbar_h.value == 0.0 and scrollbar_h.max_value <= scrollbar_h.page
+
+func set_bypass(_bypass):
+    bypass = _bypass
+    queue_sort()
+    update()
+
+export var bypass : bool = false setget set_bypass
+func _reflow():
+    if bypass:
+        do_reflow(false)
+    elif auto_hide_scrollbars:
+        var no_overflow = do_reflow(false)
+        if !no_overflow:
+            do_reflow(true)
+        else:
+            scrollbar_v.hide()
+            scrollbar_h.hide()
+    else:
+        do_reflow(true)
