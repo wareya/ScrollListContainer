@@ -26,6 +26,7 @@ margin_right = 567.0
 margin_bottom = 538.0
 rect_clip_content = true
 script = ExtResource( 2 )
+initial_spacing = false
 background_texture = SubResource( 2 )
 background_inner_rect = Rect2( 6, 6, 4, 4 )
 

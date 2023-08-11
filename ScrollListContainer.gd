@@ -4,8 +4,6 @@ extends Container
 
 var scrollbar_v : VScrollBar
 var scrollbar_h : HScrollBar
-var dummy : Node2D
-var bg_node : NinePatchRect
 
 func check_scrollbars():
     if scrollbar_v == null:
@@ -23,14 +21,6 @@ func _init():
     set_notify_transform(true)
     check_scrollbars()
     
-    dummy = Node2D.new()
-    bg_node = NinePatchRect.new()
-    bg_node.show_behind_parent = true
-    bg_node.name = "_background"
-    dummy.add_child(bg_node)
-    dummy.name = "_background_holder"
-    add_child(dummy)
-    
     var _unused = scrollbar_h.connect("value_changed", self, "_scroll")
     _unused = scrollbar_v.connect("value_changed", self, "_scroll")
     _unused = connect("sort_children", self, "_reflow")
@@ -39,25 +29,7 @@ func _init():
 
 func _ready():
     var _unused = get_viewport().connect("gui_focus_changed", self, "check_focus")
-    bg_update()
-
-var _bg_extra_size = Vector2()
-func bg_update():
-    if !bg_node or !is_instance_valid(bg_node):
-        return
-    
-    bg_node.texture = background_texture
-    if bg_node.texture:
-        var tex_size : Vector2 = bg_node.texture.get_size()
-        bg_node.patch_margin_left = int(background_inner_rect.position.x)
-        bg_node.patch_margin_top = int(background_inner_rect.position.y)
-        bg_node.patch_margin_right = int(tex_size.x - background_inner_rect.end.x)
-        bg_node.patch_margin_bottom = int(tex_size.y - background_inner_rect.end.y)
-        bg_node.rect_position = Vector2(-bg_node.patch_margin_left, -bg_node.patch_margin_top)
-        _bg_extra_size = Vector2()
-        _bg_extra_size.x = bg_node.patch_margin_left + bg_node.patch_margin_right
-        _bg_extra_size.y = bg_node.patch_margin_top + bg_node.patch_margin_bottom
-        bg_node.rect_size = rect_size + _bg_extra_size
+    fix_bg()
 
 enum ALIGN {
     ALIGN_START,
@@ -68,17 +40,22 @@ enum ALIGN {
 export var vertical : bool = true setget set_vertical
 export var follow_focus : bool = true setget set_follow_focus
 
+export var spacing : float = 0.0 setget set_spacing
+export var initial_spacing : float = 0.0 setget set_initial_spacing
+
 export var background_texture : Texture = null setget set_bg
 export var background_inner_rect : Rect2 = Rect2() setget set_bg_rect
 
 func set_bg(_background_texture):
     background_texture = _background_texture
-    bg_update()
+    if is_inside_tree():
+        fix_bg()
     update()
 
 func set_bg_rect(_background_inner_rect):
     background_inner_rect = _background_inner_rect
-    bg_update()
+    if is_inside_tree():
+        fix_bg()
     update()
 
 func set_follow_focus(_follow_focus):
@@ -88,6 +65,16 @@ func set_follow_focus(_follow_focus):
 
 func set_vertical(_vertical):
     vertical = _vertical
+    queue_sort()
+    update()
+
+func set_spacing(_spacing):
+    spacing = _spacing
+    queue_sort()
+    update()
+
+func set_initial_spacing(_initial_spacing):
+    initial_spacing = _initial_spacing
     queue_sort()
     update()
 
@@ -119,34 +106,17 @@ func check_focus(focus_owner : Control):
         elif focus_rect.position.x < rect.position.x:
             scrollbar_h.value += focus_rect.position.x - rect.position.x
 
-func fix_bg():
-    if dummy and is_instance_valid(dummy) and bg_node and is_instance_valid(bg_node) and background_texture != null:
-        var p : Node = dummy.get_parent()
-        var p2 : Node = get_parent()
-        p.remove_child(dummy)
-        p2.add_child_below_node(self, dummy)
-        p2.move_child(dummy, dummy.get_index()-1)
-        dummy.global_transform = get_global_transform()
-        bg_node.rect_position.x = -bg_node.patch_margin_left
-        bg_node.rect_position.y = -bg_node.patch_margin_top
-        bg_node.rect_size = rect_size + _bg_extra_size
-    dummy.visible = false
-
 func _notification(what):
     if what in [NOTIFICATION_TRANSFORM_CHANGED, NOTIFICATION_VISIBILITY_CHANGED]:
         fix_bg()
-        fix_virtual_bg()
     if what == NOTIFICATION_PREDELETE:
-        VisualServer.free_rid(_sibling_ci_rid)
-        _sibling_ci_rid = null
+        if _sibling_ci_rid:
+            VisualServer.free_rid(_sibling_ci_rid)
+            _sibling_ci_rid = null
 
 var _sibling_ci_rid = null
 
 func get_parent_canvasitem_of(node : CanvasItem) -> CanvasItem:
-    if node is Control:
-        var r = node.get_parent_control()
-        if r:
-            return r
     var p = node.get_parent()
     if p and p is CanvasItem:
         return p
@@ -155,7 +125,25 @@ func get_parent_canvasitem_of(node : CanvasItem) -> CanvasItem:
     else:
         return null
 
-func fix_virtual_bg():
+func calculate_bg_rect():
+    var t = background_texture
+    if t:
+        var tex_size : Vector2 = t.get_size()
+        var left = int(background_inner_rect.position.x)
+        var top = int(background_inner_rect.position.y)
+        var right = int(tex_size.x - background_inner_rect.end.x)
+        var bottom = int(tex_size.y - background_inner_rect.end.y)
+        var pos = Vector2(-left, -top)
+        var _bg_extra_size = Vector2()
+        _bg_extra_size.x = left + right
+        _bg_extra_size.y = top + bottom
+        var _bg_rect_size = rect_size + _bg_extra_size
+        return Rect2(pos, _bg_rect_size)
+    else:
+        return get_rect()
+
+
+func fix_bg():
     if _sibling_ci_rid == null:
         _sibling_ci_rid = VisualServer.canvas_item_create()
     
@@ -168,14 +156,15 @@ func fix_virtual_bg():
         parent_rid = p.get_canvas_item()
     
     VisualServer.canvas_item_set_parent(rid, parent_rid)
+    VisualServer.canvas_item_set_transform(rid, get_transform())
     # fix ordering
     VisualServer.canvas_item_set_parent(get_canvas_item(), parent_rid)
     
-    VisualServer.canvas_item_set_transform(rid, dummy.transform)
     
-    var t = bg_node.texture
+    var t = background_texture
     var s = Rect2(Vector2(), t.get_size())
-    VisualServer.canvas_item_add_nine_patch(rid, bg_node.get_rect(), s, t, background_inner_rect.position, background_inner_rect.end, bg_node.axis_stretch_horizontal, bg_node.axis_stretch_vertical, bg_node.draw_center, bg_node.modulate)
+    var r = calculate_bg_rect()
+    VisualServer.canvas_item_add_nine_patch(rid, r, s, t, background_inner_rect.position, background_inner_rect.end, VisualServer.NINE_PATCH_STRETCH, VisualServer.NINE_PATCH_STRETCH, true)
 
 func _reflow():
     check_scrollbars()
@@ -183,6 +172,11 @@ func _reflow():
     var cursor : Vector2 = Vector2()
     var rect : Rect2 = get_rect()
     rect.position = Vector2()
+    
+    if vertical:
+        cursor.y += initial_spacing
+    else:
+        cursor.x += initial_spacing
     
     if vertical:
         scroll_offset.x = 0
@@ -211,9 +205,9 @@ func _reflow():
             var remaining = Rect2(rect.position + cursor, remain_size_part + remain_ms_part)
             fit_child_in_rect(child, remaining)
             if vertical:
-                cursor.y = child.get_rect().end.y
+                cursor.y = child.get_rect().end.y + spacing
             else:
-                cursor.x = child.get_rect().end.x
+                cursor.x = child.get_rect().end.x + spacing
             child.rect_position -= scroll_offset
         elif _child is Node2D:
             var child : Node2D = _child
