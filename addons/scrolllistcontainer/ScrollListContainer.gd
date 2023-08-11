@@ -1,36 +1,10 @@
 tool
-class_name ScrollListContainer
+#class_name ScrollListContainer
 extends Container
 
 var scrollbar_v : VScrollBar = null
 var scrollbar_h : HScrollBar = null
 var scroll_offset : Vector2 = Vector2()
-
-func _check_scrollbars():
-    if scrollbar_v == null:
-        scrollbar_v = VScrollBar.new()
-        scrollbar_v.name = "_scrollbar_v"
-        add_child(scrollbar_v)
-        scrollbar_v.show_on_top = true
-    if scrollbar_h == null:
-        scrollbar_h = HScrollBar.new()
-        scrollbar_h.name = "_scrollbar_h"
-        add_child(scrollbar_h)
-        scrollbar_h.show_on_top = true
-
-func _init():
-    set_notify_transform(true)
-    _check_scrollbars()
-    
-    var _unused = scrollbar_h.connect("value_changed", self, "_scroll")
-    _unused = scrollbar_v.connect("value_changed", self, "_scroll")
-    _unused = connect("sort_children", self, "_reflow")
-    
-    set_clip_contents(true)
-
-func _ready():
-    var _unused = get_viewport().connect("gui_focus_changed", self, "_check_focus")
-    _fix_bg()
 
 enum ALIGN {
     ALIGN_START,
@@ -49,6 +23,23 @@ export var auto_hide_scrollbars : bool = true setget set_autohide
 
 export var background_texture : Texture = null setget set_bg
 export var background_inner_rect : Rect2 = Rect2() setget set_bg_rect
+
+
+# native override
+func _init():
+    set_notify_transform(true)
+    _check_scrollbars()
+    
+    var _unused = scrollbar_h.connect("value_changed", self, "_scroll")
+    _unused = scrollbar_v.connect("value_changed", self, "_scroll")
+    _unused = connect("sort_children", self, "_reflow")
+    
+    set_clip_contents(true)
+
+# native override
+func _ready():
+    var _unused = get_viewport().connect("gui_focus_changed", self, "_check_focus")
+    _fix_bg()
 
 func set_bg(_background_texture):
     background_texture = _background_texture
@@ -92,6 +83,18 @@ func set_autohide(_autohide):
     queue_sort()
     update()
 
+func _check_scrollbars():
+    if scrollbar_v == null:
+        scrollbar_v = VScrollBar.new()
+        scrollbar_v.name = "_scrollbar_v"
+        add_child(scrollbar_v)
+        scrollbar_v.show_on_top = true
+    if scrollbar_h == null:
+        scrollbar_h = HScrollBar.new()
+        scrollbar_h.name = "_scrollbar_h"
+        add_child(scrollbar_h)
+        scrollbar_h.show_on_top = true
+
 func _scroll(_unused):
     if !vertical:
         scroll_offset.x = scrollbar_h.value
@@ -124,6 +127,7 @@ func _check_focus(focus_owner : Control):
         elif focus_rect.position.x < rect.position.x:
             scrollbar_h.value += focus_rect.position.x - rect.position.x
 
+# native override
 func _notification(what):
     # fix background transform/size and draw index if anything changes
     if what in [NOTIFICATION_TRANSFORM_CHANGED, NOTIFICATION_VISIBILITY_CHANGED, NOTIFICATION_RESIZED, NOTIFICATION_MOVED_IN_PARENT, NOTIFICATION_DRAW]:
@@ -157,14 +161,22 @@ func _get_parent_canvasitem_of(node : CanvasItem) -> CanvasItem:
     else:
         return null
 
+func _get_ninepatch_rect():
+    var rect = background_inner_rect
+    if rect == Rect2():
+        var tex_size = background_texture.get_size() if background_texture else Vector2()
+        rect = Rect2(tex_size/2, Vector2())
+    return rect
+
 func _calculate_bg_rect():
     var t = background_texture
     if t:
         var tex_size : Vector2 = t.get_size()
-        var left = background_inner_rect.position.x
-        var top = background_inner_rect.position.y
-        var right = tex_size.x - background_inner_rect.end.x
-        var bottom = tex_size.y - background_inner_rect.end.y
+        var rect = _get_ninepatch_rect()
+        var left = rect.position.x
+        var top = rect.position.y
+        var right = tex_size.x - rect.end.x
+        var bottom = tex_size.y - rect.end.y
         var pos = Vector2(-left, -top)
         var _bg_extra_size = Vector2()
         _bg_extra_size.x = left + right
@@ -199,8 +211,9 @@ func _fix_bg():
     var t = background_texture
     var s = Rect2(Vector2(), t.get_size())
     var r = _calculate_bg_rect()
-    var p = background_inner_rect.position
-    var d = s.size - background_inner_rect.end
+    var rect = _get_ninepatch_rect()
+    var p = rect.position
+    var d = s.size - rect.end
     VisualServer.canvas_item_add_nine_patch(rid, r, s, t, p, d)
 
 func _do_reflow(visible_scroll : bool):
@@ -281,6 +294,7 @@ func _do_reflow(visible_scroll : bool):
         else:
             return scrollbar_h.value == 0.0 and scrollbar_h.max_value <= scrollbar_h.page
 
+# native override
 func _reflow():
     if auto_hide_scrollbars:
         var no_overflow = _do_reflow(false)
