@@ -6,21 +6,21 @@ var scrollbar_v : VScrollBar = null
 var scrollbar_h : HScrollBar = null
 var scroll_offset : Vector2 = Vector2()
 
-func check_scrollbars():
+func _check_scrollbars():
     if scrollbar_v == null:
         scrollbar_v = VScrollBar.new()
         scrollbar_v.name = "_scrollbar_v"
-        VisualServer.canvas_item_set_z_index(scrollbar_v.get_canvas_item(), 1)
         add_child(scrollbar_v)
+        scrollbar_v.show_on_top = true
     if scrollbar_h == null:
         scrollbar_h = HScrollBar.new()
         scrollbar_h.name = "_scrollbar_h"
-        VisualServer.canvas_item_set_z_index(scrollbar_h.get_canvas_item(), 1)
         add_child(scrollbar_h)
+        scrollbar_h.show_on_top = true
 
 func _init():
     set_notify_transform(true)
-    check_scrollbars()
+    _check_scrollbars()
     
     var _unused = scrollbar_h.connect("value_changed", self, "_scroll")
     _unused = scrollbar_v.connect("value_changed", self, "_scroll")
@@ -29,8 +29,8 @@ func _init():
     set_clip_contents(true)
 
 func _ready():
-    var _unused = get_viewport().connect("gui_focus_changed", self, "check_focus")
-    fix_bg()
+    var _unused = get_viewport().connect("gui_focus_changed", self, "_check_focus")
+    _fix_bg()
 
 enum ALIGN {
     ALIGN_START,
@@ -53,13 +53,13 @@ export var background_inner_rect : Rect2 = Rect2() setget set_bg_rect
 func set_bg(_background_texture):
     background_texture = _background_texture
     if is_inside_tree():
-        fix_bg()
+        _fix_bg()
     update()
 
 func set_bg_rect(_background_inner_rect):
     background_inner_rect = _background_inner_rect
     if is_inside_tree():
-        fix_bg()
+        _fix_bg()
     update()
 
 func set_follow_focus(_follow_focus):
@@ -100,43 +100,65 @@ func _scroll(_unused):
     queue_sort()
     update()
 
-func check_focus(focus_owner : Control):
+func _check_focus(focus_owner : Control):
     if !follow_focus:
         return
     if !focus_owner or !is_instance_valid(focus_owner) or !is_a_parent_of(focus_owner):
         return
     var xform = get_global_transform().inverse()
-    var focus_rect : Rect2 = xform.xform(focus_owner.get_global_rect())
+    #var focus_rect : Rect2 = xform.xform(focus_owner.get_global_rect())
+    var focus_rect : Rect2 = focus_owner.get_rect()
     var rect : Rect2 = get_rect()
+    rect.position = Vector2()
     if vertical:
+        focus_rect.position.y -= initial_spacing
+        focus_rect.end.y += initial_spacing*2.0
         if focus_rect.end.y > rect.end.y:
             scrollbar_v.value += focus_rect.end.y - rect.end.y
         elif focus_rect.position.y < rect.position.y:
             scrollbar_v.value += focus_rect.position.y - rect.position.y
     else:
+        focus_rect.position.x -= initial_spacing
+        focus_rect.end.x += initial_spacing*2.0
         if focus_rect.end.x > rect.end.x:
             scrollbar_h.value += focus_rect.end.x - rect.end.x
         elif focus_rect.position.x < rect.position.x:
             scrollbar_h.value += focus_rect.position.x - rect.position.x
 
 func _notification(what):
-    if what in [NOTIFICATION_TRANSFORM_CHANGED, NOTIFICATION_VISIBILITY_CHANGED, NOTIFICATION_RESIZED]:
-        fix_bg()
+    # fix background transform/size and draw index if anything changes
+    if what in [NOTIFICATION_TRANSFORM_CHANGED, NOTIFICATION_VISIBILITY_CHANGED, NOTIFICATION_RESIZED, NOTIFICATION_MOVED_IN_PARENT, NOTIFICATION_DRAW]:
+        _fix_bg()
+    
+    # clean up the background when we get deleted
     if what == NOTIFICATION_PREDELETE:
         if _sibling_ci_rid:
             VisualServer.free_rid(_sibling_ci_rid)
             _sibling_ci_rid = null
+    
+    # keep scrollbars drawing above contents
+    # we don't get a notification when our children change -- but it DOES trigger a redraw
+    if what == NOTIFICATION_DRAW:
+        var child_count = get_child_count()
+        if scrollbar_v:
+            var v_pos = scrollbar_v.get_position_in_parent()
+            if v_pos+2 < child_count:
+                move_child(scrollbar_v, child_count-1)
+        if scrollbar_h:
+            var h_pos = scrollbar_h.get_position_in_parent()
+            if h_pos+2 < child_count:
+                move_child(scrollbar_h, child_count-1)
 
-func get_parent_canvasitem_of(node : CanvasItem) -> CanvasItem:
+func _get_parent_canvasitem_of(node : CanvasItem) -> CanvasItem:
     var p = node.get_parent()
     if p and p is CanvasItem:
         return p
     elif p:
-        return get_parent_canvasitem_of(p)
+        return _get_parent_canvasitem_of(p)
     else:
         return null
 
-func calculate_bg_rect():
+func _calculate_bg_rect():
     var t = background_texture
     if t:
         var tex_size : Vector2 = t.get_size()
@@ -154,33 +176,36 @@ func calculate_bg_rect():
         return get_rect()
 
 var _sibling_ci_rid = null
-
-func fix_bg():
+func _fix_bg():
     if _sibling_ci_rid == null:
         _sibling_ci_rid = VisualServer.canvas_item_create()
     
     var rid = _sibling_ci_rid
     VisualServer.canvas_item_clear(rid)
-    var p = get_parent_canvasitem_of(self)
     
+    if !visible:
+        return
+    
+    var parent = _get_parent_canvasitem_of(self)
+    
+    var self_rid = get_canvas_item()
     var parent_rid = get_canvas()
-    if p:
-        parent_rid = p.get_canvas_item()
+    if parent:
+        parent_rid = parent.get_canvas_item()
     
     VisualServer.canvas_item_set_parent(rid, parent_rid)
     VisualServer.canvas_item_set_transform(rid, get_transform())
-    # fix ordering
-    VisualServer.canvas_item_set_parent(get_canvas_item(), parent_rid)
-    
+    VisualServer.canvas_item_set_draw_index(rid, get_index()-1)
     
     var t = background_texture
     var s = Rect2(Vector2(), t.get_size())
-    var r = calculate_bg_rect()
+    var r = _calculate_bg_rect()
+    var p = background_inner_rect.position
     var d = s.size - background_inner_rect.end
-    VisualServer.canvas_item_add_nine_patch(rid, r, s, t, background_inner_rect.position, d, VisualServer.NINE_PATCH_STRETCH, VisualServer.NINE_PATCH_STRETCH, true)
+    VisualServer.canvas_item_add_nine_patch(rid, r, s, t, p, d)
 
-func do_reflow(visible_scroll : bool):
-    check_scrollbars()
+func _do_reflow(visible_scroll : bool):
+    _check_scrollbars()
     
     var cursor : Vector2 = Vector2()
     var raw_rect : Rect2 = get_rect()
@@ -236,8 +261,10 @@ func do_reflow(visible_scroll : bool):
     
     var c = cursor
     if vertical:
+        cursor.y += initial_spacing
         cursor.y -= spacing
     else:
+        cursor.x += initial_spacing
         cursor.x -= spacing
     
     if vertical:
@@ -255,21 +282,15 @@ func do_reflow(visible_scroll : bool):
         else:
             return scrollbar_h.value == 0.0 and scrollbar_h.max_value <= scrollbar_h.page
 
-func set_bypass(_bypass):
-    bypass = _bypass
-    queue_sort()
-    update()
-
-export var bypass : bool = false setget set_bypass
 func _reflow():
-    if bypass:
-        do_reflow(false)
-    elif auto_hide_scrollbars:
-        var no_overflow = do_reflow(false)
+    if auto_hide_scrollbars:
+        var no_overflow = _do_reflow(false)
         if !no_overflow:
-            do_reflow(true)
+            _do_reflow(true)
         else:
             scrollbar_v.hide()
             scrollbar_h.hide()
     else:
-        do_reflow(true)
+        _do_reflow(true)
+    
+    _fix_bg()
