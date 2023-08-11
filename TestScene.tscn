@@ -1,0 +1,154 @@
+[gd_scene load_steps=5 format=2]
+
+[ext_resource path="res://icon.png" type="Texture" id=1]
+[ext_resource path="res://ScrollListContainer.gd" type="Script" id=2]
+
+[sub_resource type="Gradient" id=1]
+offsets = PoolRealArray( 0, 0.793296, 0.871508, 0.955307 )
+colors = PoolColorArray( 0.284653, 0.330994, 0.560547, 1, 0.369073, 0.409945, 0.612408, 1, 1, 1, 1, 1, 1, 1, 1, 0 )
+
+[sub_resource type="GradientTexture2D" id=2]
+gradient = SubResource( 1 )
+width = 16
+height = 16
+fill = 1
+fill_from = Vector2( 0.5, 0.5 )
+fill_to = Vector2( 0.5, 0 )
+
+[node name="Node2D" type="Panel"]
+margin_right = 453.0
+margin_bottom = 582.0
+
+[node name="ScrollListContainer" type="Container" parent="."]
+margin_left = 45.0
+margin_top = 38.0
+margin_right = 567.0
+margin_bottom = 538.0
+rect_clip_content = true
+script = ExtResource( 2 )
+background_texture = SubResource( 2 )
+background_inner_rect = Rect2( 6, 6, 4, 4 )
+
+[node name="Label" type="Label" parent="ScrollListContainer"]
+margin_right = 510.0
+margin_bottom = 31.0
+text = "asdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdf
+asdf2"
+
+[node name="Label2" type="Label" parent="ScrollListContainer"]
+margin_top = 31.0
+margin_right = 510.0
+margin_bottom = 62.0
+text = "asdfasdfasdf
+asdf2"
+
+[node name="Button" type="Button" parent="ScrollListContainer"]
+margin_top = 62.0
+margin_right = 510.0
+margin_bottom = 82.0
+text = "ah,"
+
+[node name="TextureRect" type="TextureRect" parent="ScrollListContainer"]
+margin_top = 82.0
+margin_right = 510.0
+margin_bottom = 146.0
+rect_min_size = Vector2( 0, 64 )
+texture = ExtResource( 1 )
+expand = true
+
+[node name="Label3" type="Label" parent="ScrollListContainer"]
+margin_top = 146.0
+margin_right = 510.0
+margin_bottom = 177.0
+text = "asdfasdfasdf
+asdf2"
+
+[node name="Label4" type="Label" parent="ScrollListContainer"]
+margin_top = 177.0
+margin_right = 510.0
+margin_bottom = 208.0
+text = "asdfasdfasdf
+asdf2"
+
+[node name="Label5" type="Label" parent="ScrollListContainer"]
+margin_top = 208.0
+margin_right = 510.0
+margin_bottom = 239.0
+text = "asdfasdfasdf
+asdf2"
+
+[node name="Label6" type="Label" parent="ScrollListContainer"]
+margin_top = 239.0
+margin_right = 510.0
+margin_bottom = 270.0
+text = "asdfasdfasdf
+asdf2"
+
+[node name="Label7" type="Label" parent="ScrollListContainer"]
+margin_top = 270.0
+margin_right = 510.0
+margin_bottom = 301.0
+text = "asdfasdfasdf
+asdf2"
+
+[node name="Label8" type="Label" parent="ScrollListContainer"]
+margin_top = 301.0
+margin_right = 510.0
+margin_bottom = 332.0
+text = "asdfasdfasdf
+asdf2"
+
+[node name="Label12" type="Label" parent="ScrollListContainer"]
+margin_top = 332.0
+margin_right = 510.0
+margin_bottom = 363.0
+text = "asdfasdfasdf
+asdf2"
+
+[node name="Label13" type="Label" parent="ScrollListContainer"]
+margin_top = 363.0
+margin_right = 510.0
+margin_bottom = 394.0
+text = "asdfasdfasdf
+asdf2"
+
+[node name="Label9" type="Label" parent="ScrollListContainer"]
+margin_top = 394.0
+margin_right = 510.0
+margin_bottom = 425.0
+text = "asdfasdfasdf
+asdf2"
+
+[node name="Label10" type="Label" parent="ScrollListContainer"]
+margin_top = 425.0
+margin_right = 510.0
+margin_bottom = 456.0
+text = "asdfasdfasdf
+asdf2"
+
+[node name="Label11" type="Label" parent="ScrollListContainer"]
+margin_top = 456.0
+margin_right = 510.0
+margin_bottom = 487.0
+text = "asdfasdfasdf
+asdf2"
+
+[node name="Label18" type="Label" parent="ScrollListContainer"]
+margin_top = 487.0
+margin_right = 510.0
+margin_bottom = 518.0
+text = "asdfasdfasdf
+asdf2"
+
+[node name="Label19" type="Label" parent="ScrollListContainer"]
+margin_top = 518.0
+margin_right = 510.0
+margin_bottom = 549.0
+text = "asdfasdfasdf
+asdf2"
+
+[node name="Button2" type="Button" parent="ScrollListContainer"]
+margin_top = 549.0
+margin_right = 510.0
+margin_bottom = 569.0
+text = "ah,"
