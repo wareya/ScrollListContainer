@@ -30,30 +30,6 @@ corner_radius_bottom_left = 3
 offset_right = 435.0
 offset_bottom = 378.0
 
-[node name="TextureRect3" type="TextureRect" parent="."]
-custom_minimum_size = Vector2(64, 64)
-layout_mode = 2
-offset_left = 75.0
-offset_top = 12.0
-offset_right = 139.0
-offset_bottom = 76.0
-size_flags_horizontal = 0
-size_flags_vertical = 0
-texture = ExtResource("1")
-expand_mode = 1
-
-[node name="TextureRect4" type="TextureRect" parent="."]
-custom_minimum_size = Vector2(64, 64)
-layout_mode = 2
-offset_left = 193.0
-offset_top = 14.0
-offset_right = 257.0
-offset_bottom = 78.0
-size_flags_horizontal = 0
-size_flags_vertical = 0
-texture = ExtResource("1")
-expand_mode = 1
-
 [node name="ScrollListContainer" type="Container" parent="."]
 clip_contents = true
 layout_mode = 0
@@ -117,27 +93,3 @@ text = "From where I stand, there isn't much in the way of delicacies to partake
 layout_mode = 2
 size_flags_horizontal = 0
 text = "Non-expanding button"
-
-[node name="TextureRect5" type="TextureRect" parent="."]
-custom_minimum_size = Vector2(64, 64)
-layout_mode = 2
-offset_left = 282.0
-offset_top = 83.0
-offset_right = 346.0
-offset_bottom = 147.0
-size_flags_horizontal = 0
-size_flags_vertical = 0
-texture = ExtResource("1")
-expand_mode = 1
-
-[node name="TextureRect6" type="TextureRect" parent="."]
-custom_minimum_size = Vector2(64, 64)
-layout_mode = 2
-offset_left = 278.0
-offset_top = 210.0
-offset_right = 342.0
-offset_bottom = 274.0
-size_flags_horizontal = 0
-size_flags_vertical = 0
-texture = ExtResource("1")
-expand_mode = 1
