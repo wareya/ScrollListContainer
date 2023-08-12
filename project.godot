@@ -12,7 +12,7 @@ config_version=4
 
 config/name="ScrollList"
 run/main_scene="res://addons/scrolllistcontainer/example/TestScene.tscn"
-config/icon="res://addons/scrolllistcontainer/example/icon.png"
+config/icon="res://icon.png"
 
 [editor_plugins]
 
