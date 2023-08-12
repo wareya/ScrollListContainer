@@ -6,20 +6,22 @@
 ;   [section] ; section goes between []
 ;   param=value ; assign values to parameters
 
-config_version=4
+config_version=5
 
 [application]
 
 config/name="ScrollList"
 run/main_scene="res://addons/scrolllistcontainer/example/TestScene.tscn"
+config/features=PackedStringArray("4.1")
 config/icon="res://icon.png"
 
 [editor_plugins]
 
-enabled=PoolStringArray( "res://addons/scrolllistcontainer/plugin.cfg" )
+enabled=PackedStringArray("res://addons/scrolllistcontainer/plugin.cfg")
 
 [gui]
 
+theme/custom="res://theme.tres"
 common/drop_mouse_on_gui_input_disabled=true
 
 [physics]

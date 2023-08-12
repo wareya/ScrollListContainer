@@ -1,1 +1,5 @@
 .import/
+.godot/
+.export/
+.ignore/
+.trash/

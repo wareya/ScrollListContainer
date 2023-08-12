@@ -1,4 +1,4 @@
-tool
+@tool
 #class_name ScrollListContainer
 extends Container
 
@@ -9,20 +9,20 @@ var scroll_offset : Vector2 = Vector2()
 enum ALIGN {
     ALIGN_START,
     ALIGN_MIDDLE,
-    ALIGN_END,
+    ALIGNMENT_END,
 }
 
-export var vertical : bool = true setget set_vertical
-export var follow_focus : bool = true setget set_follow_focus
+@export var vertical : bool = true: set = set_vertical
+@export var follow_focus : bool = true: set = set_follow_focus
 
-export var spacing : float = 0.0 setget set_spacing
-export var initial_spacing : float = 0.0 setget set_initial_spacing
-export var side_margin : float = 0.0 setget set_side_margin
+@export var spacing : float = 0.0: set = set_spacing
+@export var initial_spacing : float = 0.0: set = set_initial_spacing
+@export var side_margin : float = 0.0: set = set_side_margin
 
-export var auto_hide_scrollbars : bool = true setget set_autohide
+@export var auto_hide_scrollbars : bool = true: set = set_autohide
 
-export var background_texture : Texture = null setget set_bg
-export var background_inner_rect : Rect2 = Rect2() setget set_bg_rect
+@export var background_texture : Texture2D = null: set = set_bg
+@export var background_inner_rect : Rect2 = Rect2(): set = set_bg_rect
 
 
 # native override
@@ -30,70 +30,71 @@ func _init():
     set_notify_transform(true)
     _check_scrollbars()
     
-    var _unused = scrollbar_h.connect("value_changed", self, "_scroll")
-    _unused = scrollbar_v.connect("value_changed", self, "_scroll")
-    _unused = connect("sort_children", self, "_reflow")
+    scrollbar_h.value_changed.connect(_scroll)
+    scrollbar_v.value_changed.connect(_scroll)
+    sort_children.connect(_reflow)
     
     set_clip_contents(true)
 
 # native override
 func _ready():
-    var _unused = get_viewport().connect("gui_focus_changed", self, "_check_focus")
+    var _unused = get_viewport().connect("gui_focus_changed", Callable(self, "_check_focus"))
     _fix_bg()
+    
+    # TODO: if/when godot 4 re-adds NOTIFICATION_MOVED_IN_PARENT, use that instead
+    set_process(true)
 
 func set_bg(_background_texture):
     background_texture = _background_texture
     if is_inside_tree():
         _fix_bg()
-    update()
+    queue_redraw()
 
 func set_bg_rect(_background_inner_rect):
     background_inner_rect = _background_inner_rect
     if is_inside_tree():
         _fix_bg()
-    update()
+    queue_redraw()
 
 func set_follow_focus(_follow_focus):
     follow_focus = _follow_focus
     queue_sort()
-    update()
+    queue_redraw()
 
 func set_vertical(_vertical):
     vertical = _vertical
     queue_sort()
-    update()
+    queue_redraw()
 
 func set_spacing(_spacing):
     spacing = _spacing
     queue_sort()
-    update()
+    queue_redraw()
 
 func set_side_margin(_margin):
     side_margin = _margin
     queue_sort()
-    update()
+    queue_redraw()
 
 func set_initial_spacing(_initial_spacing):
     initial_spacing = _initial_spacing
     queue_sort()
-    update()
+    queue_redraw()
 
 func set_autohide(_autohide):
     auto_hide_scrollbars = _autohide
     queue_sort()
-    update()
+    queue_redraw()
 
 func _check_scrollbars():
     if scrollbar_v == null:
         scrollbar_v = VScrollBar.new()
         scrollbar_v.name = "_scrollbar_v"
         add_child(scrollbar_v)
-        scrollbar_v.show_on_top = true
     if scrollbar_h == null:
         scrollbar_h = HScrollBar.new()
         scrollbar_h.name = "_scrollbar_h"
         add_child(scrollbar_h)
-        scrollbar_h.show_on_top = true
 
 func _scroll(_unused):
     if !vertical:
@@ -101,12 +102,12 @@ func _scroll(_unused):
     else:
         scroll_offset.y = scrollbar_v.value
     queue_sort()
-    update()
+    queue_redraw()
 
 func _check_focus(focus_owner : Control):
     if !follow_focus:
         return
-    if !focus_owner or !is_instance_valid(focus_owner) or !is_a_parent_of(focus_owner):
+    if !focus_owner or !is_instance_valid(focus_owner) or !is_ancestor_of(focus_owner):
         return
     var focus_rect : Rect2 = focus_owner.get_rect()
     var rect : Rect2 = get_rect()
@@ -128,15 +129,24 @@ func _check_focus(focus_owner : Control):
             scrollbar_h.value += focus_rect.position.x - rect.position.x
 
 # native override
+var _current_index = -1
 func _notification(what):
+    if what == NOTIFICATION_PROCESS:
+        # TODO: if/when godot 4 re-adds NOTIFICATION_MOVED_IN_PARENT, use that instead
+        var new_index = get_index()
+        if new_index != _current_index:
+            _current_index = new_index
+            _fix_bg()
+        return
+        
     # fix background transform/size and draw index if anything changes
-    if what in [NOTIFICATION_TRANSFORM_CHANGED, NOTIFICATION_VISIBILITY_CHANGED, NOTIFICATION_RESIZED, NOTIFICATION_MOVED_IN_PARENT, NOTIFICATION_DRAW]:
+    if what in [NOTIFICATION_TRANSFORM_CHANGED, NOTIFICATION_VISIBILITY_CHANGED, NOTIFICATION_RESIZED, NOTIFICATION_DRAW]:
         _fix_bg()
     
     # clean up the background when we get deleted
     if what == NOTIFICATION_PREDELETE:
         if _sibling_ci_rid:
-            VisualServer.free_rid(_sibling_ci_rid)
+            RenderingServer.free_rid(_sibling_ci_rid)
             _sibling_ci_rid = null
     
     # keep scrollbars drawing above contents
@@ -144,11 +154,11 @@ func _notification(what):
     if what == NOTIFICATION_DRAW:
         var child_count = get_child_count()
         if scrollbar_v:
-            var v_pos = scrollbar_v.get_position_in_parent()
+            var v_pos = scrollbar_v.get_index()
             if v_pos+2 < child_count:
                 move_child(scrollbar_v, child_count-1)
         if scrollbar_h:
-            var h_pos = scrollbar_h.get_position_in_parent()
+            var h_pos = scrollbar_h.get_index()
             if h_pos+2 < child_count:
                 move_child(scrollbar_h, child_count-1)
 
@@ -181,7 +191,7 @@ func _calculate_bg_rect():
         var _bg_extra_size = Vector2()
         _bg_extra_size.x = left + right
         _bg_extra_size.y = top + bottom
-        var _bg_rect_size = rect_size + _bg_extra_size
+        var _bg_rect_size = size + _bg_extra_size
         return Rect2(pos, _bg_rect_size)
     else:
         return get_rect()
@@ -189,10 +199,10 @@ func _calculate_bg_rect():
 var _sibling_ci_rid = null
 func _fix_bg():
     if _sibling_ci_rid == null:
-        _sibling_ci_rid = VisualServer.canvas_item_create()
+        _sibling_ci_rid = RenderingServer.canvas_item_create()
     
     var rid = _sibling_ci_rid
-    VisualServer.canvas_item_clear(rid)
+    RenderingServer.canvas_item_clear(rid)
     
     if !visible:
         return
@@ -204,9 +214,9 @@ func _fix_bg():
     if parent:
         parent_rid = parent.get_canvas_item()
     
-    VisualServer.canvas_item_set_parent(rid, parent_rid)
-    VisualServer.canvas_item_set_transform(rid, get_transform())
-    VisualServer.canvas_item_set_draw_index(rid, get_index()-1)
+    RenderingServer.canvas_item_set_parent(rid, parent_rid)
+    RenderingServer.canvas_item_set_transform(rid, get_transform())
+    RenderingServer.canvas_item_set_draw_index(rid, get_index()-1)
     
     var t = background_texture
     var s = Rect2(Vector2(), t.get_size())
@@ -214,7 +224,7 @@ func _fix_bg():
     var rect = _get_ninepatch_rect()
     var p = rect.position
     var d = s.size - rect.end
-    VisualServer.canvas_item_add_nine_patch(rid, r, s, t, p, d)
+    RenderingServer.canvas_item_add_nine_patch(rid, r, s, t, p, d)
 
 func _do_reflow(visible_scroll : bool):
     _check_scrollbars()
@@ -253,7 +263,7 @@ func _do_reflow(visible_scroll : bool):
     var remain_size_part = Vector2(rect.size.x, 0.0) if vertical else Vector2(0.0, rect.size.y)
     
     for _child in get_children():
-        if _child == scrollbar_v or _child == scrollbar_h or _child.is_set_as_toplevel() or !_child.is_visible_in_tree():
+        if _child == scrollbar_v or _child == scrollbar_h or _child.is_set_as_top_level() or !_child.is_visible_in_tree():
             continue
         if _child is Control:
             var child : Control = _child
@@ -265,7 +275,7 @@ func _do_reflow(visible_scroll : bool):
                 cursor.y = child.get_rect().end.y + spacing
             else:
                 cursor.x = child.get_rect().end.x + spacing
-            child.rect_position -= scroll_offset
+            child.position -= scroll_offset
         elif _child is Node2D:
             var child : Node2D = _child
             child.position = cursor
@@ -294,7 +304,6 @@ func _do_reflow(visible_scroll : bool):
         else:
             return scrollbar_h.value == 0.0 and scrollbar_h.max_value <= scrollbar_h.page
 
-# native override
 func _reflow():
     if auto_hide_scrollbars:
         var no_overflow = _do_reflow(false)
